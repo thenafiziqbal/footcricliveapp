@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FOOTCRIC • Live Sports Streaming</title>
+<!-- Favicon with a modern, clean design -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%2300E676%22></rect><text x=%2250%22 y=%2253%22 font-size=%2265%22 fill=%22%231A1A1A%22 text-anchor=%22middle%22 dominant-baseline=%22middle%22 font-family=%22Inter, sans-serif%22 font-weight=%22bold%22>F</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.0/dist/hls.min.js"></script>
+
+<style>
+  /* ---
+  FOOTCRIC Professional UI Style Sheet
+  --- */
+
+  :root {
+    --bg: #121212;
+    --card: #1E1E1E;
+    --accent: #00E676;
+    --accent-dark: #00B35C;
+    --accent-weak: rgba(0, 230, 118, 0.1);
+    --glow-color: rgba(0, 230, 118, 0.4);
+    --live-red: #FF4081;
+    --text-primary: #FFFFFF;
+    --text-secondary: #BDBDBD;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --radius: 12px;
+    --shadow: rgba(0, 0, 0, 0.5);
+    font-family: "Inter", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    transition: background 0.3s ease;
+  }
+
+  /* --- Keyframe Animations --- */
+  @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+  @keyframes slideInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes slideInLeft { from { transform: translateX(-100%); } to { transform: translateX(0); } }
+  @keyframes slideOutLeft { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes pulse { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.2); opacity: 0.7; } 100% { scale(1); opacity: 1; } }
+  @keyframes shimmer { 0% { background-position: -468px 0; } 100% { background-position: 468px 0; } }
+  
+  @keyframes textPulse {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.05); }
+  }
+
+  /* --- Notice Banner Animation (Speed Increased) --- */
+  @keyframes marquee {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+  }
+
+  /* --- General Layout & App Wrapper --- */
+  #appWrapper { padding-top: 60px; padding-bottom: 70px; }
+  
+  /* --- Top Bar Navigation --- */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px;
+    background: rgba(18, 18, 18, 0.8);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 100;
+  }
+  .topbar .brand { font-size: 20px; font-weight: 700; color: var(--accent); }
+  .topbar-controls { display: flex; align-items: center; gap: 16px; }
+  .icon-btn { background: none; border: none; color: var(--text-secondary); cursor: pointer; position: relative; padding: 5px; transition: color 0.2s ease, transform 0.2s ease; }
+  .icon-btn:hover { color: var(--text-primary); transform: scale(1.1); }
+  .icon-btn svg { width: 24px; height: 24px; }
+  .notification-badge { position: absolute; top: 0; right: 0; background: #E53935; color: white; width: 16px; height: 16px; border-radius: 50%; font-size: 10px; font-weight: bold; display: grid; place-items: center; }
+
+  /* --- Content Components --- */
+  .notice-banner { 
+    display: block;
+    margin: 16px; 
+    padding: 12px; 
+    background: var(--card); 
+    border-left: 4px solid var(--accent); 
+    border-radius: var(--radius); 
+    font-size: 14px; 
+    cursor: pointer; 
+    transition: background 0.2s ease; 
+    overflow: hidden; 
+    white-space: nowrap;
+    text-decoration: none;
+    color: var(--text-primary);
+  }
+  .notice-banner p {
+    display: inline-block;
+    padding-left: 100%;
+    animation: marquee 15s linear infinite; /* Speed increased from 25s to 15s */
+  }
+  .notice-banner:hover { background: var(--accent-weak); }
+  .notice-banner:hover p { animation-play-state: paused; }
+
+  .filter-chips { display: flex; gap: 10px; padding: 0 16px 16px; overflow-x: auto; scrollbar-width: none; }
+  .filter-chips::-webkit-scrollbar { display: none; }
+  .chip { flex-shrink: 0; padding: 8px 16px; background: var(--card); border: 1px solid var(--border-color); color: var(--text-secondary); border-radius: 999px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s ease-out; }
+  .chip.active { background: var(--accent); color: #000; font-weight: 600; border-color: var(--accent); }
+  
+  /* --- Event Card Styling --- */
+  .list { padding: 0 16px 80px; display: grid; gap: 16px; }
+  .event { background: var(--card); border-radius: var(--radius); border: 1px solid var(--border-color); box-shadow: 0 4px 20px rgba(0,0,0,0.3); overflow: hidden; cursor: pointer; transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease; animation: slideInUp 0.5s ease-out forwards; opacity: 0; }
+  .event:hover { transform: translateY(-5px); box-shadow: 0 10px 30px var(--shadow), 0 0 15px var(--glow-color); border-color: var(--accent); }
+  .event-header { display: flex; align-items: center; gap: 8px; padding: 8px 12px; font-size: 12px; font-weight: 500; background: rgba(0,0,0,0.2); color: var(--text-secondary); }
+  .event-header img { width: 16px; height: 16px; border-radius: 4px; }
+  .event-body { display: grid; grid-template-columns: 1fr 1.2fr 1fr; align-items: center; padding: 16px 12px; gap: 12px; }
+  .team-box { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; }
+  .logo-img { width: 48px; height: 48px; border-radius: 50%; object-fit: contain; background: rgba(255,255,255,0.05); }
+  .team-name { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+  .meta { text-align: center; font-weight: 600; }
+  .meta .live-indicator { display: flex; align-items: center; justify-content: center; gap: 6px; color: var(--live-red); font-size: 14px; margin-bottom: 4px; }
+  .meta .live-indicator::before { content: '•'; animation: pulse 1.5s infinite; }
+  .meta .time, .meta .date { font-size: 20px; color: var(--text-primary); }
+  .meta .date { font-size: 14px; color: var(--accent); }
+  .meta .countdown, .meta .status-text { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+
+  /* --- Side Menu --- */
+  #sideMenu { display: none; position: fixed; top: 0; left: 0; bottom: 0; width: 280px; background: #181818; z-index: 1002; flex-direction: column; animation: slideInLeft 0.3s forwards; border-right: 1px solid var(--border-color); }
+  #sideMenu.closing { animation: slideOutLeft 0.3s forwards; }
+  #menuOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1001; }
+  .menu-brand { padding: 20px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; gap: 12px; }
+  .menu-brand img { height: 40px; } .menu-brand span { font-size: 20px; font-weight: 700; }
+  .menu-nav { flex-grow: 1; overflow-y: auto; padding-top: 10px; }
+  .menu-section { padding: 10px 20px; font-size: 12px; color: var(--text-secondary); text-transform: uppercase; }
+  .menu-item { display: flex; align-items: center; gap: 15px; padding: 15px 20px; color: var(--text-primary); cursor: pointer; text-decoration: none; border-left: 3px solid transparent; }
+  .menu-item:hover { background: var(--card); border-left-color: var(--accent); }
+  .menu-item svg { width: 22px; height: 22px; color: var(--text-secondary); }
+
+  /* --- Bottom Navigation --- */
+  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-around; background: rgba(18, 18, 18, 0.8); backdrop-filter: blur(10px); border-top: 1px solid var(--border-color); padding: 8px 0; z-index: 100; }
+  .nav-btn { background: none; border: none; cursor: pointer; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text-secondary); transition: color 0.2s ease, transform 0.2s ease; }
+  .nav-btn.active { color: var(--accent); transform: translateY(-3px); }
+  .nav-btn svg { width: 24px; height: 24px; }
+  .nav-btn span { font-size: 12px; font-weight: 500; }
+
+  /* --- Modals (General Styling) --- */
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1003; display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+  .modal-content { background: var(--card); border-radius: var(--radius); width: 90%; max-width: 360px; padding: 20px; animation: fadeIn 0.3s; border: 1px solid var(--border-color); box-shadow: 0 10px 40px var(--shadow); }
+  .modal-content h3 { margin-bottom: 16px; text-align: center; font-weight: 600; }
+  .modal-action-btn { display: block; width: 100%; padding: 12px; margin-bottom: 10px; background: #3c3c3c; border: none; color: var(--text-primary); border-radius: 8px; cursor: pointer; transition: background 0.2s, color 0.2s; font-weight: 500; }
+  .modal-action-btn:hover { background: var(--accent); color: #000; }
+  .modal-action-btn.primary { background: var(--accent); color: #000; }
+  .modal-action-btn.secondary { background: none; border: 1px solid var(--border-color); color: var(--text-secondary); }
+
+  /* --- Specific Modals --- */
+  #notificationList .notification-item { padding: 10px; border-bottom: 1px solid var(--border-color); font-size: 14px; }
+  #searchModal { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 1003; flex-direction: column; }
+  #searchInput { width: calc(100% - 20px); padding: 12px; margin: 10px; border: 1px solid var(--border-color); background: var(--card); color: var(--text-primary); border-radius: 8px; font-size: 16px; }
+  #warningModal .modal-content p { color: var(--text-secondary); font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
+
+  /* --- Player Page --- */
+  #playerPage { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 1000; flex-direction: column; }
+  .player-header { display: flex; align-items: center; padding: 10px; background: rgba(18, 18, 18, 0.8); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border-color); z-index: 1; }
+  .player-header .brand { flex-grow: 1; text-align: center; font-weight: 600; padding: 0 10px; }
+  .player-header .player-controls { display: flex; gap: 8px; }
+  .player-wrapper { position: relative; width: 100%; background: #000; aspect-ratio: 16/9; }
+  .player-container { width: 100%; height: 100%; }
+  .player-container iframe, .player-container video { width: 100%; height: 100%; border: none; }
+  .player-error-message {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    color: var(--text-secondary); background: rgba(0,0,0,0.5); text-align: center; padding: 20px; font-size: 14px;
+  }
+  
+  /* --- Advertisement Banners (UPDATED) --- */
+  .advertisement-banner {
+      margin: 16px 16px; 
+      text-align: center;
+      line-height: 0; /* Helps remove extra space below iframes */
+  }
+  .advertisement-banner img { /* Kept for backward compatibility */
+      max-width: 100%;
+      height: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--border-color);
+  }
+  #player-advertisement-banner {
+      background: var(--card);
+      padding: 0;
+      margin: 0;
+      line-height: 0;
+      border-top: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+  }
+
+  .player-content { flex-grow: 1; overflow-y: auto; }
+  .page-title { padding: 16px; font-size: 18px; font-weight: 600; color: var(--accent); }
+  .static-page-content { padding: 16px; line-height: 1.7; color: var(--text-secondary); }
+  .static-page-content h2 { color: var(--text-primary); margin-bottom: 12px; }
+  .static-page-content p { margin-bottom: 12px; }
+  .static-page-content ul { list-style-position: inside; margin-bottom: 12px; }
+
+  /* --- Skeleton Loader --- */
+  .skeleton.event { border-color: var(--border-color); }
+  .skeleton .event-header, .skeleton .logo-img, .skeleton .team-name, .skeleton .time, .skeleton .date { background: linear-gradient(90deg, var(--card) 25%, #3a3a3a 50%, var(--card) 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite linear; color: transparent; border-radius: 8px; }
+
+  /* --- Full Page Loader --- */
+  #loadingSpinner { 
+    position: fixed; inset: 0; background: rgba(18, 18, 18, 0.9); z-index: 9999; 
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+    transition: opacity 0.5s;
+  }
+  #loadingSpinner::before { 
+    content: ''; width: 40px; height: 40px; border: 3px solid var(--accent-weak); 
+    border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; 
+  }
+  .loader-brand {
+    font-size: 24px; font-weight: 700; color: var(--text-primary);
+    letter-spacing: 2px; animation: textPulse 2s ease-in-out infinite;
+  }
+</style>
+</head>
+<body>
+
+  <div id="loadingSpinner">
+    <div class="loader-brand">FOOTCRIC.LIVE</div>
+  </div>
+
+  <!-- Side Menu (Initially Hidden) -->
+  <div id="menuOverlay"></div>
+  <aside id="sideMenu"></aside>
+
+  <!-- Modals -->
+  <div id="streamModal" class="modal-overlay"></div>
+  <div id="notificationModal" class="modal-overlay">
+    <div class="modal-content">
+      <h3>Notifications</h3>
+      <div id="notificationList"></div>
+      <button class="modal-action-btn secondary" id="closeNotificationBtn">Close</button>
+    </div>
+  </div>
+  <div id="warningModal" class="modal-overlay">
+      <div class="modal-content">
+          <h3 id="warningTitle">Welcome FOOTCRIC!</h3>
+          <p id="warningText">Please confirm you are of legal age to view this content and agree to our terms of service.</p>
+          <button class="modal-action-btn primary" id="acceptWarningBtn">I Understand and Accept</button>
+      </div>
+  </div>
+
+  <!-- Search Modal -->
+  <div id="searchModal">
+    <header class="player-header">
+      <button class="icon-btn" id="closeSearchBtn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"></path></svg></button>
+      <input id="searchInput" type="text" placeholder="Search events...">
+    </header>
+    <div class="list" id="searchResults"></div>
+  </div>
+
+  <!-- Main Application Body -->
+  <div id="appWrapper">
+    <header class="topbar">
+      <button class="icon-btn" id="menuBtn">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path></svg>
+      </button>
+      <div class="brand" id="appBrandName">FOOTCRIC.LIVE </div>
+      <div class="topbar-controls">
+        <button class="icon-btn" id="shareBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"></path></svg>
+        </button>
+        <button class="icon-btn" id="notificationBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2zm6-6v-5c0-3.07-1.63-5.64-4.5-6.32V4c0-.83-.67-1.5-1.5-1.5s-1.5.67-1.5 1.5v.68C7.64 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"></path></svg>
+          <span class="notification-badge" id="notificationCount">0</span>
+        </button>
+        <button class="icon-btn" id="searchBtn">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27A6.471 6.471 0 0 0 16 9.5 6.5 6.5 0 1 0 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"></path></svg>
+        </button>
+      </div>
+    </header>
+    
+    <main id="mainContent"></main>
+    
+    <footer class="bottom-nav">
+      <button class="nav-btn active" data-page="home">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M4 12h1.41l2.83-2.83-1.41-1.41L1 12l4.83 4.83 1.41-1.41L4 13H3v-1zm18-1h-1.41l-2.83 2.83 1.41 1.41L23 12l-4.83-4.83-1.41 1.41L20 11h1v1zM11.59 4.01l-1.42 1.41L12.03 7H12c-2.76 0-5 2.24-5 5s2.24 5 5 5h.03l-1.86 1.86 1.42 1.41L17.41 12 11.59 4.01z"></path></svg>
+        <span>Live Events</span>
+      </button>
+      <button class="nav-btn" data-page="sports">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M13 6.06V3h-2v3.06c-4.5.5-8 4.31-8 8.94h2c0-3.87 3.13-7 7-7s7 3.13 7 7h2c0-4.63-3.5-8.44-8-8.94zM12 15c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3z"></path></svg>
+        <span>Sports</span>
+      </button>
+      <button class="nav-btn" data-page="categories">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z"></path></svg>
+        <span>Categories</span>
+      </button>
+    </footer>
+  </div>
+
+  <!-- Player Page (Initially Hidden) -->
+  <div id="playerPage"></div>
+
+<!-- [UPDATED] Firebase SDK and Application Logic -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+    import { getDatabase, ref, get } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-database.js";
+
+    // --- APPLICATION CONFIG & STATE ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyAekyfwK_X4qpz1R1nYo8hoUSO481t6sJc",
+        authDomain: "newappsmart.firebaseapp.com",
+        databaseURL: "https://newappsmart-default-rtdb.firebaseio.com",
+        projectId: "newappsmart",
+        storageBucket: "newappsmart.appspot.com",
+        messagingSenderId: "985060087689",
+        appId: "1:985060087689:web:01f85023141e1396743358",
+        measurementId: "G-6DRY7XJMMK"
+    };
+
+    const App = {
+        state: {
+            allEvents: [],
+            siteConfig: {},
+            notifications: [],
+            sports: [],
+            categories: [],
+            currentPage: 'home',
+            hlsInstance: null,
+            countdownIntervals: [],
+        },
+
+        elements: {
+            loadingSpinner: document.getElementById('loadingSpinner'),
+            mainContent: document.getElementById('mainContent'),
+            appBrandName: document.getElementById('appBrandName'),
+            notificationCount: document.getElementById('notificationCount'),
+            sideMenu: document.getElementById('sideMenu'),
+            menuOverlay: document.getElementById('menuOverlay'),
+            streamModal: document.getElementById('streamModal'),
+            notificationModal: document.getElementById('notificationModal'),
+            notificationList: document.getElementById('notificationList'),
+            searchModal: document.getElementById('searchModal'),
+            searchInput: document.getElementById('searchInput'),
+            searchResults: document.getElementById('searchResults'),
+            playerPage: document.getElementById('playerPage'),
+            appWrapper: document.getElementById('appWrapper'),
+            warningModal: document.getElementById('warningModal'),
+            warningTitle: document.getElementById('warningTitle'),
+            warningText: document.getElementById('warningText'),
+        },
+
+        async init() {
+            this.ui.showLoader();
+            
+            const loadingTimeout = setTimeout(() => {
+                console.warn("App loading timed out. Forcing UI to display.");
+                this.ui.hideLoader();
+            }, 10000);
+
+            this.elements.mainContent.innerHTML = this.templates.createSkeletonHTML(5);
+            this.addEventListeners();
+
+            try {
+                const app = initializeApp(firebaseConfig);
+                const db = getDatabase(app);
+                const snapshot = await get(ref(db));
+                const data = snapshot.val();
+
+                if (data) {
+                    this.state.siteConfig = data.config || {};
+                    
+                    const eventsData = data.events || {};
+                    const allEventsList = Object.values(eventsData).flatMap(groupOrEvent => {
+                        if (groupOrEvent && typeof groupOrEvent === 'object') {
+                            if (groupOrEvent.id && groupOrEvent.teams) {
+                                return [groupOrEvent];
+                            }
+                            return Object.values(groupOrEvent);
+                        }
+                        return [];
+                    }).filter(event => event && event.id);
+                    this.state.allEvents = allEventsList;
+                    
+                    this.state.notifications = data.notifications || [];
+                    
+                    this.state.allEvents.sort((a, b) => (a.status === 'live' ? -1 : 1) - (b.status === 'live' ? -1 : 1) || new Date(a.startAt) - new Date(b.startAt));
+
+                    this.state.sports = data.sports || this.utils.computeSports();
+                    this.state.categories = data.categories || this.utils.computeCategories();
+
+                    this.ui.applyBranding();
+                    this.ui.renderSideMenu();
+                    this.router.switchPage('home');
+                    this.ui.handleWarning();
+                } else {
+                    this.elements.mainContent.innerHTML = '<div class="static-page-content" style="text-align: center;">No data available. Check back later.</div>';
+                }
+            } catch (error) {
+                console.error("Firebase Initialization Error:", error);
+                this.elements.mainContent.innerHTML = '<div class="static-page-content" style="text-align: center;">Error: Failed to load application data. Please try refreshing the page.</div>';
+            } finally {
+                clearTimeout(loadingTimeout);
+                this.ui.hideLoader();
+            }
+        },
+
+        addEventListeners() {
+            document.body.addEventListener('click', e => {
+                const eventCard = e.target.closest('.event');
+                if (eventCard && !e.target.closest('.static-page-content')) {
+                    if (!e.target.closest('#playerPage')) {
+                        const eventId = eventCard.dataset.id;
+                        if (eventId) this.ui.openStreamModal(eventId);
+                    }
+                }
+
+                const streamLink = e.target.closest('.stream-link');
+                if (streamLink && streamLink.id !== 'closeModalBtn') {
+                    this.player.open(streamLink.dataset.eventId, streamLink.dataset.streamIndex);
+                }
+                if (e.target.id === 'closeModalBtn') this.ui.closeStreamModal();
+
+                const filterChip = e.target.closest('.filter-chips .chip');
+                if (filterChip) this.ui.renderHomePage(this.state.allEvents, filterChip.dataset.filter);
+
+                const navBtn = e.target.closest('.nav-btn');
+                if (navBtn) this.router.switchPage(navBtn.dataset.page);
+
+                const menuItem = e.target.closest('.menu-item');
+                if (menuItem) {
+                    const page = menuItem.dataset.page;
+                    if (page) {
+                        e.preventDefault();
+                        this.router.switchPage(page);
+                        this.ui.closeSideMenu();
+                    }
+                }
+            });
+
+            this.elements.sideMenu.addEventListener('click', e => {
+                 const shareButton = e.target.closest('[data-action="share"]');
+                 if (shareButton) {
+                     e.preventDefault();
+                     this.ui.shareApp();
+                 }
+            });
+            
+            this.elements.playerPage.addEventListener('click', e => {
+                const eventCard = e.target.closest('.event');
+                if (eventCard && eventCard.dataset.id) {
+                    this.player.close();
+                    setTimeout(() => {
+                        this.ui.openStreamModal(eventCard.dataset.id);
+                    }, 100);
+                }
+            });
+
+            document.getElementById('menuBtn').onclick = () => this.ui.openSideMenu();
+            this.elements.menuOverlay.onclick = () => this.ui.closeSideMenu();
+            document.getElementById('notificationBtn').onclick = () => this.ui.openNotificationModal();
+            document.getElementById('closeNotificationBtn').onclick = () => this.ui.closeNotificationModal();
+            document.getElementById('searchBtn').onclick = () => this.ui.openSearchModal();
+            document.getElementById('shareBtn').onclick = () => this.ui.shareApp();
+            document.getElementById('closeSearchBtn').onclick = () => this.ui.closeSearchModal();
+            this.elements.searchInput.addEventListener('input', e => this.ui.performSearch(e.target.value));
+            document.getElementById('acceptWarningBtn').onclick = () => this.ui.acceptWarning();
+        },
+
+        utils: {
+            formatCountdown(targetDate) {
+                const distance = new Date(targetDate) - new Date();
+                if (distance < 0) return "Starts Shortly";
+                const hours = Math.floor(distance / (1000 * 60 * 60));
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                return `Starts in ${hours}h ${minutes}m`;
+            },
+            computeSports() {
+                const leagueMap = App.state.allEvents.reduce((acc, e) => {
+                    if (e.league) {
+                        if (!acc[e.league]) acc[e.league] = { name: e.league, logo: e.leagueLogo, eventCount: 0 };
+                        acc[e.league].eventCount++;
+                    }
+                    return acc;
+                }, {});
+                return Object.values(leagueMap);
+            },
+            computeCategories() {
+                const categoryMap = App.state.allEvents.reduce((acc, e) => {
+                    if (e.category) {
+                        if (!acc[e.category]) acc[e.category] = { name: e.category, logo: '', eventCount: 0 };
+                        acc[e.category].eventCount++;
+                    }
+                    return acc;
+                }, {});
+                return Object.values(categoryMap);
+            }
+        },
+        router: {
+            switchPage(page) {
+                App.state.currentPage = page;
+                document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+                const activeNavBtn = document.querySelector(`.nav-btn[data-page="${page}"]`);
+                if(activeNavBtn) activeNavBtn.classList.add('active');
+
+                window.scrollTo(0, 0);
+
+                switch (page) {
+                    case 'home': App.ui.renderHomePage(); break;
+                    case 'sports': App.ui.renderSportsPage(); break;
+                    case 'categories': App.ui.renderCategoriesPage(); break;
+                    case 'privacy': App.ui.renderPrivacyPage(); break;
+                    case 'contact': App.ui.renderContactPage(); break;
+                    default: App.ui.renderHomePage(); break;
+                }
+            },
+            filterBy(type, name) {
+                const filtered = App.state.allEvents.filter(e => e[type] === name);
+                App.ui.renderHomePage(filtered);
+                this.switchPage('home');
+            }
+        },
+        ui: {
+            showLoader: () => App.elements.loadingSpinner.style.display = 'flex',
+            hideLoader: () => {
+                App.elements.loadingSpinner.style.opacity = '0';
+                setTimeout(() => App.elements.loadingSpinner.style.display = 'none', 500);
+            },
+            clearCountdowns: () => {
+                App.state.countdownIntervals.forEach(clearInterval);
+                App.state.countdownIntervals = [];
+            },
+            
+            // [NEW FUNCTION ADDED] This function safely renders HTML strings that contain scripts.
+            renderAdWithScripts(container, htmlContent) {
+                if (!container || !htmlContent) return;
+                container.innerHTML = htmlContent;
+                const scripts = container.querySelectorAll('script');
+                scripts.forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => {
+                        newScript.setAttribute(attr.name, attr.value);
+                    });
+                    if (oldScript.innerHTML) {
+                        newScript.text = oldScript.innerHTML;
+                    }
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+            },
+
+            applyBranding() {
+                const branding = App.state.siteConfig.branding || {};
+                document.title = branding.appName || 'FOOTCRIC';
+                App.elements.appBrandName.textContent = branding.appName || 'FOOTCRIC';
+                App.elements.notificationCount.textContent = App.state.notifications.length;
+            },
+            renderHomePage(events = App.state.allEvents, filter = 'all') {
+                const counts = {
+                    all: events.length,
+                    live: events.filter(e => e.status === 'live').length,
+                    recent: events.filter(e => e.status !== 'live' && new Date(e.startAt) < new Date()).length,
+                    upcoming: events.filter(e => e.status !== 'live' && new Date(e.startAt) > new Date()).length
+                };
+                let filteredEvents = events;
+                if (filter === 'live') filteredEvents = events.filter(e => e.status === 'live');
+                if (filter === 'upcoming') filteredEvents = events.filter(e => e.status !== 'live' && new Date(e.startAt) > new Date());
+                if (filter === 'recent') filteredEvents = events.filter(e => e.status !== 'live' && new Date(e.startAt) < new Date());
+
+                const noticeHTML = App.templates.createNoticeHTML(App.state.siteConfig.notice);
+                const filtersHTML = App.templates.createFiltersHTML(counts, filter);
+                
+                // [MODIFIED] Using a placeholder div structure to inject ads safely
+                const adConfig = App.state.siteConfig.advertisement || {};
+                const topAdHTML = App.templates.createAdCodeBannerHTML(adConfig.home_banner_top, 'home-top-ad-container');
+                const bottomAdHTML = App.templates.createAdCodeBannerHTML(adConfig.home_banner_bottom, 'home-bottom-ad-container');
+                
+                this.clearCountdowns();
+                const listHTML = filteredEvents.length ? filteredEvents.map(App.templates.createEventHTML).join('') : `<div class="static-page-content" style="text-align:center;">No events found for this filter.</div>`;
+
+                App.elements.mainContent.innerHTML = `${noticeHTML}${filtersHTML}${topAdHTML}<div class="list">${listHTML}</div>${bottomAdHTML}`;
+                
+                // [MODIFIED] Execute scripts for the ads after rendering main content using the new function
+                const topAdContainer = document.getElementById('home-top-ad-container');
+                if (topAdContainer && adConfig.home_banner_top?.enabled && adConfig.home_banner_top.code) {
+                    this.renderAdWithScripts(topAdContainer, adConfig.home_banner_top.code);
+                }
+                const bottomAdContainer = document.getElementById('home-bottom-ad-container');
+                if (bottomAdContainer && adConfig.home_banner_bottom?.enabled && adConfig.home_banner_bottom.code) {
+                    this.renderAdWithScripts(bottomAdContainer, adConfig.home_banner_bottom.code);
+                }
+
+                document.querySelectorAll('.countdown').forEach(el => {
+                    const update = () => { el.textContent = App.utils.formatCountdown(el.dataset.startTime); };
+                    const interval = setInterval(update, 1000 * 60);
+                    App.state.countdownIntervals.push(interval);
+                    update();
+                });
+            },
+            renderSportsPage() {
+                const sportsHTML = App.state.sports.map(s => App.templates.createListItemHTML('league', s)).join('');
+                App.elements.mainContent.innerHTML = `<div class="page-title">Sports</div><div class="list">${sportsHTML || '<div class="static-page-content" style="text-align:center;">No sports available.</div>'}</div>`;
+            },
+            renderCategoriesPage() {
+                const categoriesHTML = App.state.categories.map(c => App.templates.createListItemHTML('category', c)).join('');
+                App.elements.mainContent.innerHTML = `<div class="page-title">Categories</div><div class="list">${categoriesHTML || '<div class="static-page-content" style="text-align:center;">No categories available.</div>'}</div>`;
+            },
+            renderPrivacyPage() {
+                App.elements.mainContent.innerHTML = App.templates.createStaticPageHTML(
+                    "Privacy Policy",
+                    `<p>Your privacy is important to us. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you visit our website.</p>
+                     <h2>Information We Collect</h2>
+                     <p>We may collect information about you in a variety of ways. The information we may collect on the Site includes personal data that you voluntarily provide to us when you register on the site.</p>
+                     <h2>Use of Your Information</h2>
+                     <p>Having accurate information permits us to provide you with a smooth, efficient, and customized experience. Specifically, we may use information collected about you to...</p>
+                     <ul><li>Create and manage your account.</li><li>Email you regarding your account or order.</li><li>Enable user-to-user communications.</li></ul>`
+                );
+            },
+            renderContactPage() {
+                App.elements.mainContent.innerHTML = App.templates.createStaticPageHTML(
+                    "Contact Us",
+                    `<p>If you have questions or comments about this, please contact us:</p>
+                     <ul>
+                        <li>By Email: contact@footcric.live</li>
+                        <li>By visiting a page on our website: footcric.live/contact</li>
+                        <li>By Telegram: @footcric_support</li>
+                     </ul>`
+                );
+            },
+            renderSideMenu() {
+                let menuConfig = App.state.siteConfig.sideMenu;
+                if (!menuConfig || menuConfig.length === 0) {
+                    menuConfig = [
+                        {
+                            title: "Main Menu",
+                            items: [
+                                { name: "Home", page: "home", iconPath: "M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" },
+                                { name: "Share App", action: "share", iconPath: "M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z" }
+                            ]
+                        },
+                        {
+                            title: "Information",
+                            items: [
+                                { name: "Contact Us", page: "contact", iconPath: "M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4l-8 5-8-5V6l8 5 8-5v2z" },
+                                { name: "Privacy Policy", page: "privacy", iconPath: "M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z" }
+                            ]
+                        }
+                    ];
+                }
+                const branding = App.state.siteConfig.branding || {};
+                App.elements.sideMenu.innerHTML = App.templates.createSideMenuHTML(branding, menuConfig);
+            },
+            openSideMenu() {
+                App.elements.sideMenu.style.display = 'flex';
+                App.elements.menuOverlay.style.display = 'block';
+                App.elements.sideMenu.classList.remove('closing');
+            },
+            closeSideMenu() {
+                App.elements.sideMenu.classList.add('closing');
+                App.elements.menuOverlay.style.display = 'none';
+                setTimeout(() => {
+                    App.elements.sideMenu.style.display = 'none';
+                    App.elements.sideMenu.classList.remove('closing');
+                }, 300);
+            },
+            async shareApp() {
+                const shareData = {
+                    title: App.state.siteConfig.branding?.appName || 'FOOTCRIC',
+                    text: 'Check out live sports streaming on FOOTCRIC!',
+                    url: window.location.href
+                };
+                try {
+                    if (navigator.share) {
+                        await navigator.share(shareData);
+                    } else {
+                        alert('Share feature not supported on this browser. Copy the URL manually.');
+                    }
+                } catch (err) {
+                    console.error("Share failed:", err);
+                }
+            },
+            openStreamModal(eventId) {
+                const event = App.state.allEvents.find(e => e.id === eventId);
+                if (!event || !event.streams?.length) return;
+                App.elements.streamModal.innerHTML = App.templates.createStreamModalHTML(event);
+                App.elements.streamModal.style.display = 'flex';
+            },
+            closeStreamModal: () => App.elements.streamModal.style.display = 'none',
+            openNotificationModal() {
+                const listHTML = App.state.notifications.map(n => `<div class="notification-item">${n.text}</div>`).join('');
+                App.elements.notificationList.innerHTML = listHTML || '<div class="static-page-content" style="text-align:center;">No new notifications.</div>';
+                App.elements.notificationModal.style.display = 'flex';
+            },
+            closeNotificationModal: () => App.elements.notificationModal.style.display = 'none',
+            openSearchModal() {
+                App.elements.searchModal.style.display = 'flex';
+                App.elements.searchInput.focus();
+                App.elements.searchInput.value = '';
+                App.elements.searchResults.innerHTML = '';
+            },
+            closeSearchModal: () => App.elements.searchModal.style.display = 'none',
+            performSearch(query) {
+                if(query.length < 2) {
+                    App.elements.searchResults.innerHTML = '';
+                    return;
+                }
+                const filtered = App.state.allEvents.filter(e => 
+                    e.teams.home.name.toLowerCase().includes(query.toLowerCase()) ||
+                    e.teams.away.name.toLowerCase().includes(query.toLowerCase()) ||
+                    e.league.toLowerCase().includes(query.toLowerCase()) ||
+                    e.category.toLowerCase().includes(query.toLowerCase())
+                );
+                App.elements.searchResults.innerHTML = filtered.map(App.templates.createEventHTML).join('') || '<div class="static-page-content" style="text-align:center;">No results found.</div>';
+            },
+            handleWarning() { return; },
+            acceptWarning() {
+                const version = App.state.siteConfig.warning?.version;
+                if (version) localStorage.setItem('warningAccepted', version);
+                App.elements.warningModal.style.display = 'none';
+            }
+        },
+        player: {
+            toggleFullScreen() {
+                const playerWrapper = document.querySelector('.player-wrapper');
+                if (!playerWrapper) return;
+                if (!document.fullscreenElement) {
+                    playerWrapper.requestFullscreen().catch(err => {
+                        alert(`Error attempting to enable full-screen mode: ${err.message} (${err.name})`);
+                    });
+                } else {
+                    document.exitFullscreen();
+                }
+            },
+            async togglePictureInPicture() {
+                const video = document.querySelector('.player-container video');
+                if (!video) return;
+
+                try {
+                    if (document.pictureInPictureElement) {
+                        await document.exitPictureInPicture();
+                    } else if (document.pictureInPictureEnabled) {
+                        await video.requestPictureInPicture();
+                    }
+                } catch(error) {
+                    console.error("PiP Error:", error);
+                }
+            },
+            open(eventId, streamIndex) {
+                App.ui.closeStreamModal();
+                const event = App.state.allEvents.find(e => e.id === eventId);
+                if (!event) return;
+                const stream = event.streams[streamIndex];
+                if (!stream) return;
+                
+                App.elements.playerPage.innerHTML = App.templates.createPlayerPageHTML(event, streamIndex);
+                App.elements.playerPage.style.display = 'flex';
+                App.elements.appWrapper.style.display = 'none';
+                
+                document.getElementById('backBtn').onclick = () => this.close();
+                document.getElementById('fullscreenBtn').onclick = () => this.toggleFullScreen();
+                document.getElementById('pipBtn').onclick = () => this.togglePictureInPicture();
+
+                // [MODIFIED] Player Page Ad Logic using the new function
+                const adConfig = App.state.siteConfig.advertisement?.player_banner;
+                const adContainer = document.getElementById('player-advertisement-banner');
+                if (adContainer && adConfig?.enabled && adConfig.code) {
+                    App.ui.renderAdWithScripts(adContainer, adConfig.code);
+                }
+
+                const playerContainer = document.querySelector('.player-container');
+                const streamType = stream.type.toLowerCase();
+
+                if (streamType === 'hls' || streamType === 'm3u8') {
+                    playerContainer.innerHTML = '<video id="hlsPlayer" autoplay playsinline controls style="width:100%; height:100%;"></video>';
+                    const videoElement = document.getElementById('hlsPlayer');
+                    if (Hls.isSupported()) {
+                        App.state.hlsInstance = new Hls();
+                        App.state.hlsInstance.loadSource(stream.url);
+                        App.state.hlsInstance.attachMedia(videoElement);
+                        App.state.hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+                            if (data.fatal) playerContainer.innerHTML += '<div class="player-error-message">Could not load the stream. Try another.</div>';
+                        });
+                    } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+                        videoElement.src = stream.url;
+                        videoElement.addEventListener('error', () => playerContainer.innerHTML += '<div class="player-error-message">Could not load the stream. Try another.</div>');
+                    } else {
+                        playerContainer.innerHTML = '<div class="player-error-message">HLS not supported on your browser.</div>';
+                    }
+                } else if (streamType === 'yt' || streamType === 'youtube') {
+                    const videoId = stream.url.split('v=')[1]?.split('&')[0] || stream.url.split('/').pop();
+                    playerContainer.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+                } else { 
+                    playerContainer.innerHTML = `<iframe src="${stream.url}" referrerpolicy="no-referrer" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
+                }
+            },
+            close() {
+                if (App.state.hlsInstance) {
+                    App.state.hlsInstance.destroy();
+                    App.state.hlsInstance = null;
+                }
+                App.elements.playerPage.innerHTML = '';
+                App.elements.playerPage.style.display = 'none';
+                App.elements.appWrapper.style.display = 'block';
+            }
+        },
+        templates: {
+            createEventHTML(ev) {
+                const startDate = new Date(ev.startAt);
+                const isLive = ev.status === 'live';
+                const isUpcoming = !isLive && startDate > new Date();
+                let metaHTML = `<div class="status-text">Finished</div>`;
+                if (isLive) {
+                    metaHTML = `<div class="live-indicator">Live</div><div class="time" style="color: var(--live-red);">${ev.score || new Date(ev.startAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>`;
+                } else if (isUpcoming) {
+                    metaHTML = `<div class="time">${startDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div><div class="date">${startDate.toLocaleDateString('en-GB')}</div><div class="countdown" data-start-time="${ev.startAt}">Calculating...</div>`;
+                }
+                return `<div class="event" data-id="${ev.id}">
+                    <div class="event-header"><img src="${ev.leagueLogo || ''}" alt="" onerror="this.style.display='none';"><span>${ev.category} | ${ev.league}</span></div>
+                    <div class="event-body">
+                        <div class="team-box"><img class="logo-img" src="${ev.teams.home.logo}" onerror="this.style.display='none';"><span class="team-name">${ev.teams.home.name}</span></div>
+                        <div class="meta">${metaHTML}</div>
+                        <div class="team-box"><img class="logo-img" src="${ev.teams.away.logo}" onerror="this.style.display='none';"><span class="team-name">${ev.teams.away.name}</span></div>
+                    </div>
+                </div>`;
+            },
+            createSkeletonHTML: count => Array(count).fill('<div class="event skeleton"><div class="event-header"></div><div class="event-body"><div class="team-box"><div class="logo-img"></div><div class="team-name" style="width: 80px; height: 14px;"></div></div><div class="meta"><div class="time" style="width: 60px; height: 20px;"></div><div class="date" style="width: 80px; height: 14px; margin-top: 4px;"></div></div><div class="team-box"><div class="logo-img"></div><div class="team-name" style="width: 80px; height: 14px;"></div></div></div></div>').join(''),
+            createNoticeHTML(notice) {
+                if (!notice || !notice.enabled || !notice.text) return '';
+                const content = `<p>${notice.text}</p>`;
+                if (notice.url) {
+                    return `<a href="${notice.url}" target="_blank" rel="noopener noreferrer" class="notice-banner">${content}</a>`;
+                }
+                return `<div class="notice-banner">${content}</div>`;
+            },
+            
+            // [MODIFIED] This function now returns a placeholder div for ads. The new function will populate it.
+            createAdCodeBannerHTML(adConfig, containerId) {
+                if (adConfig && adConfig.enabled && adConfig.code) {
+                    return `<div class="advertisement-banner" id="${containerId}"></div>`;
+                }
+                return '';
+            },
+
+            // [UNCHANGED] Kept the old image-based ad function as requested to not delete any code.
+            createHomeAdBannerHTML(ad) {
+                return `<div class="advertisement-banner">
+                            <a href="${ad.linkUrl || '#'}" target="_blank" rel="noopener noreferrer">
+                                <img src="${ad.imageUrl}" alt="Advertisement">
+                            </a>
+                        </div>`;
+            },
+            createStaticPageHTML(title, content) {
+                return `<div class="page-title">${title}</div><div class="static-page-content">${content}</div>`;
+            },
+            createFiltersHTML: (counts, filter) => `<div class="filter-chips">
+                ${['all', 'live', 'upcoming', 'recent'].map(f => `<button class="chip ${filter === f ? 'active' : ''}" data-filter="${f}">${f.charAt(0).toUpperCase() + f.slice(1)} (${counts[f]})</button>`).join('')}
+            </div>`,
+            createListItemHTML: (type, item) => `<div class="event" onclick="App.router.filterBy('${type}', '${item.name}')">
+                <div class="event-header" style="justify-content: space-between;"><span>${item.name}</span><span>${item.eventCount} Events</span></div>
+                <div class="event-body" style="grid-template-columns: auto 1fr;"><img class="logo-img" src="${item.logo || ''}" onerror="this.style.display='none'"><span style="font-weight: 600;">View Matches</span></div>
+            </div>`,
+            createSideMenuHTML(branding, menuConfig) {
+                const brandHTML = `<div class="menu-brand"><img src="${branding.logo || ''}" alt=""><span>${branding.appName || 'FOOTCRIC'}</span></div>`;
+                let itemsHTML = menuConfig.map(section => `
+                    <div class="menu-section">${section.title}</div>
+                    ${section.items.map(item => `
+                        <a href="${item.url || '#'}" class="menu-item" 
+                           ${item.action ? `data-action="${item.action}"` : ''} 
+                           ${item.page ? `data-page="${item.page}"` : ''}
+                           target="${item.url && item.url !== '#' ? '_blank' : '_self'}">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="${item.iconPath}"/></svg>
+                            <span>${item.name}</span>
+                        </a>`).join('')}
+                `).join('');
+                return `${brandHTML}<nav class="menu-nav">${itemsHTML}</nav>`;
+            },
+            createStreamModalHTML(event) {
+                return `<div class="modal-content">
+                    <h3>Select a Stream</h3>
+                    ${event.streams.map((stream, index) => `<button class="modal-action-btn stream-link" data-event-id="${event.id}" data-stream-index="${index}">${stream.name}</button>`).join('')}
+                    <button class="modal-action-btn secondary" id="closeModalBtn">Close</button>
+                </div>`;
+            },
+            createPlayerPageHTML(event, streamIndex) {
+                 const relatedEvents = App.state.allEvents.filter(e => e.id !== event.id && e.category === event.category).slice(0, 5);
+                 const relatedEventsHTML = relatedEvents.length > 0
+                    ? relatedEvents.map(App.templates.createEventHTML).join('')
+                    : `<div class="static-page-content" style="text-align:center;">No other related events found.</div>`;
+
+                 return `<header class="player-header">
+                    <button class="icon-btn" id="backBtn"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"></path></svg></button>
+                    <div class="brand">${event.teams.home.name} vs ${event.teams.away.name}</div>
+                    <div class="player-controls">
+                        <button class="icon-btn" id="pipBtn" title="Picture-in-Picture"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M19 11h-8v6h8v-6zm4 8V4.98C23 3.88 22.1 3 21 3H3c-1.1 0-2 .88-2 1.98V19c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2zm-2 .02H3V4.97h18v14.05z"></path></svg></button>
+                        <button class="icon-btn" id="fullscreenBtn" title="Fullscreen"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"></path></svg></button>
+                    </div>
+                </header>
+                <div class="player-wrapper"><div class="player-container"></div></div>
+                <div id="player-advertisement-banner"></div>
+                <div class="player-content">
+                    <div class="filter-chips" style="padding:16px;">${event.streams.map((s, i) => `<button class="chip ${i == streamIndex ? 'active' : ''}" onclick="App.player.open('${event.id}', ${i})">${s.name}</button>`).join('')}</div>
+                    <div class="page-title">Related Events</div>
+                    <div class="list">${relatedEventsHTML}</div>
+                </div>`;
+            }
+        }
+    };
+
+    // --- Start the application ---
+    document.addEventListener('DOMContentLoaded', () => App.init());
+</script>
+
+</body>
+</html>
